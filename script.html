@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kejahatan Masop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --success-hover: #059669;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); padding: 30px 20px; }
+        
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .header p { color: var(--text-muted); font-size: 14px; margin-top: 5px; }
+
+        .app-container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 420px 1fr; gap: 30px; }
+        
+        .card { background: var(--bg-card); padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 500; font-size: 13px; color: var(--text-main); margin-bottom: 8px; }
+        
+        /* Styled Inputs */
+        input[type="date"], input[type="number"], textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; background: #fdfdfd; transition: all 0.2s; outline: none;
+        }
+        input[type="date"]:focus, input[type="number"]:focus, textarea:focus {
+            border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); background: #fff;
+        }
+        
+        /* Custom Upload Zone */
+        .upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+        .upload-zone:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.02); }
+        .upload-zone p { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+        .upload-zone input { display: none; }
+
+        /* Map styling */
+        #map { height: 180px; border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border); z-index: 1; }
+        
+        /* Slider Styling */
+        .slider-container { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { flex: 1; accent-color: var(--primary); cursor: pointer; }
+        .badge { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+        /* Buttons */
+        button {
+            width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary { background-color: var(--primary); color: white; margin-top: 15px; }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .btn-success { background-color: var(--success); color: white; margin-top: 12px; display: none; }
+        .btn-success:hover { background-color: var(--success-hover); transform: translateY(-1px); }
+
+        .info-text { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+
+        /* Preview Area */
+        .preview-section { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; background: #f1f5f9; border-radius: 16px; border: 2px dashed #cbd5e1; padding: 20px; position: relative; }
+        .preview-placeholder { color: var(--text-muted); text-align: center; font-size: 14px; }
+        canvas { max-width: 100%; max-height: 70vh; height: auto; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); display: none; }
+
+        @media (max-width: 900px) {
+            .app-container { grid-template-columns: 1fr; }
+            body { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Kejahatan Masop</h1>
+    <p>Nanti tinggal masukin foto abistu tentuin lokasi, kalau lokasi gk akurat mohon input sendiri (jangan lupa ganti harinya)</p>
+</div>
+
+<div class="app-container">
+    <div class="card">
+        <div class="card-title">⚙️ Pengaturan Gambar</div>
+        
+        <div class="form-group">
+            <label>1. Unggah Foto</label>
+            <div class="upload-zone" onclick="document.getElementById('imageUpload').click()">
+                <span id="uploadText" style="font-size: 14px; font-weight: 500; color: var(--primary);">Klik untuk memilih foto</span>
+                <p id="fileNameText">Format: JPG, PNG</p>
+                <input type="file" id="imageUpload" accept="image/*">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>2. Atur Tanggal & Bulan</label>
+            <input type="date" id="dateInput">
+        </div>
+
+        <div class="form-group">
+            <label>3. Atur Jam (0-23)</label>
+            <input type="number" id="hourInput" min="0" max="23" placeholder="Contoh: 06">
+            <div class="info-text">💡 Menit dan detik akan diacak sistem secara otomatis agar terlihat natural.</div>
+        </div>
+
+        <div class="form-group">
+            <label>4. Pilih Lokasi Presisi</label>
+            <div id="map"></div>
+            <textarea id="locationInput" rows="3" placeholder="Nama Jalan / Gedung&#10;Kota&#10;Keterangan Tambahan"></textarea>
+            <div class="info-text">💡 Klik titik pada peta untuk memuat alamat otomatis atau ketik manual (gunakan 'Enter' untuk baris baru).</div>
+        </div>
+
+        <div class="form-group">
+            <label>5. Ukuran Font</label>
+            <div class="slider-container">
+                <input type="range" id="fontSizeSlider" min="1.0" max="6.0" value="2.5" step="0.1">
+                <span class="badge"><span id="fontSizeDisplay">2.5</span>%</span>
+            </div>
+            <div class="info-text">💡 Persentase skala menyesuaikan resolusi asli foto.</div>
+        </div>
+
+        <button class="btn-primary" onclick="generateImage()">⚡ Proses & Tempel Teks</button>
+        <button id="downloadBtn" class="btn-success" onclick="downloadImage()">💾 Simpan Hasil Foto</button>
+    </div>
+
+    <div class="preview-section" id="previewContainer">
+        <div class="preview-placeholder" id="placeholderText">
+            <p style="font-size: 40px; margin-bottom: 10px;">🖼️</p>
+            <p>Belum ada foto yang diproses.</p>
+            <p style="font-size: 12px; margin-top: 5px; color: var(--text-muted);">Silakan isi data di panel kiri lalu klik Proses.</p>
+        </div>
+        <canvas id="canvas"></canvas>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Inisialisasi Peta
+    const map = L.map('map').setView([-6.2088, 106.8456], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let marker;
+
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng]).addTo(map);
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(response => response.json())
+            .then(data => {
+                if(data.address) {
+                    const road = data.address.road || '';
+                    const city = data.address.city || data.address.town || data.address.state || '';
+                    const suburb = data.address.suburb || '';
+                    
+                    let formattedLocation = '';
+                    if(road) formattedLocation += road + '\n';
+                    if(suburb) formattedLocation += suburb + '\n';
+                    if(city) formattedLocation += city;
+                    
+                    document.getElementById('locationInput').value = formattedLocation;
+                }
+            });
+    });
+
+    // Setup Canvas
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let uploadedImage = new Image();
+
+    // Handle Upload Gambar
+    document.getElementById('imageUpload').addEventListener('change', function(e) {
+        if(e.target.files.length === 0) return;
+        
+        const file = e.target.files[0];
+        document.getElementById('uploadText').innerText = "Foto Berhasil Dipilih";
+        document.getElementById('uploadText').style.color = "var(--success)";
+        document.getElementById('fileNameText').innerText = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            uploadedImage.onload = function() {
+                canvas.width = uploadedImage.width;
+                canvas.height = uploadedImage.height;
+                ctx.drawImage(uploadedImage, 0, 0);
+                
+                // Switch view placeholder ke canvas
+                document.getElementById('placeholderText').style.display = 'none';
+                canvas.style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'none';
+            }
+            uploadedImage.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    // Real-time Slider Display
+    document.getElementById('fontSizeSlider').addEventListener('input', function() {
+        document.getElementById('fontSizeDisplay').innerText = this.value;
+    });
+
+    const namaBulan = ["Maret", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    function generateImage() {
+        if (!uploadedImage.src) {
+            alert("Silakan unggah foto terlebih dahulu!");
+            return;
+        }
+
+        ctx.drawImage(uploadedImage, 0, 0);
+
+        // Ambil Tanggal
+        const dateVal = document.getElementById('dateInput').value;
+        let dateString = "";
+        if (dateVal) {
+            const dateObj = new Date(dateVal);
+            dateString = `${dateObj.getDate()} ${namaBulan[dateObj.getMonth() + 1]} ${dateObj.getFullYear()}`;
+        }
+
+        // Ambil Jam + Acak Menit/Detik
+        const hourVal = document.getElementById('hourInput').value;
+        let timeString = "";
+        if (hourVal !== "") {
+            const jam = hourVal.padStart(2, '0');
+            const randomMenit = Math.floor(Math.random() * 60).toString().padStart(2, '0');
+            const randomDetik = Math.floor(Math.random() * 60).toString().padStart(2, '0');
+            timeString = `at ${jam}.${randomMenit}.${randomDetik}`; 
+        }
+
+        // Ambil Lokasi
+        const locationText = document.getElementById('locationInput').value;
+        const locationLines = locationText.split('\n');
+
+        // Kalkulasi Ukuran Font Premium
+        const fontSizePercentage = document.getElementById('fontSizeSlider').value;
+        const fontSize = Math.max(Math.floor(canvas.width * (fontSizePercentage / 100)), 12); 
+        
+        ctx.font = `${fontSize}px Arial, sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.textAlign = "right";
+        
+        // Shadow halus agar teks kontras di background apapun
+        ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        const paddingRight = fontSize * 1.2; 
+        const paddingBottom = fontSize * 1.6; 
+        const lineSpacing = fontSize * 1.35;
+
+        let currentY = canvas.height - paddingBottom;
+
+        // Cetak Baris Waktu & Tanggal
+        const finalDateTimeString = `${dateString} ${timeString}`.trim();
+        if(finalDateTimeString) {
+            ctx.fillText(finalDateTimeString, canvas.width - paddingRight, currentY);
+            currentY -= lineSpacing; 
+        }
+
+        // Cetak Baris Alamat (Mundur dari baris bawah)
+        for (let i = locationLines.length - 1; i >= 0; i--) {
+            if (locationLines[i].trim() !== "") {
+                ctx.fillText(locationLines[i].trim(), canvas.width - paddingRight, currentY);
+                currentY -= lineSpacing;
+            }
+        }
+
+        // Tampilkan tombol unduh jika sukses
+        document.getElementById('downloadBtn').style.display = 'flex';
+        
+        // Scroll otomatis ke tampilan preview jika di HP
+        if(window.innerWidth <= 900) {
+            document.getElementById('previewContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function downloadImage() {
+        const link = document.createElement('a');
+        link.download = `Timestamp_${Date.now()}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+    }
+</script>
+
+</body>
+</html>
